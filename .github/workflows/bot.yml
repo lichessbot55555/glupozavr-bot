@@ -1,6 +1,6 @@
 name: Lichess bot
 
-# GitHub Actions caps a single job at 6 hours, so the bot plays for about 5h45m. The cron runs
+# GitHub Actions caps a single job at 6 hours, so the bot plays for 5h50m and the restart is queued. The cron runs
 # every hour and the concurrency group keeps one run queued, so the next run starts as soon as
 # the active one stops. That also restarts the bot automatically after a crash.
 
@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       minutes:
-        description: "How long to run, in minutes"
+        description: "How long to run, in minutes (350 is the maximum that fits the 6 hour job limit)"
         required: false
-        default: "60"
+        default: "350"
 
 permissions:
   contents: read
@@ -24,7 +24,7 @@ concurrency:
 jobs:
   play:
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v6
 
@@ -98,14 +98,14 @@ jobs:
       - name: Play
         env:
           LICHESS_BOT_TOKEN: ${{ secrets.LICHESS_BOT_TOKEN }}
-          RUN_MINUTES: ${{ inputs.minutes || 345 }}
+          RUN_MINUTES: ${{ inputs.minutes || 350 }}
         run: |
           budget=$(( RUN_MINUTES * 60 ))
           echo "Running the bot for $(( budget / 60 )) minutes."
           # SIGINT lets lichess-bot finish the running game instead of abandoning it.
           # A crash must fail the job, so only the timeout exit codes are tolerated.
           set +e
-          timeout --signal=INT --kill-after=240s "$budget" \
+          timeout --signal=INT --kill-after=180s "$budget" \
             python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log
           code=$?
           set -e
