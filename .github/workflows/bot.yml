@@ -40,22 +40,24 @@ jobs:
 
       - name: Download Stockfish
         run: |
+          set -euo pipefail
           mkdir -p engines
-          urls=(
-            "https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-linux-x86-64-universal.tar.gz"
-            "https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-ubuntu-x86-64-avx2.tar"
-          )
-          for url in "${urls[@]}"; do
-            if curl -fsSL --retry 3 -o /tmp/stockfish.tar "$url"; then
-              echo "Downloaded $url"
-              break
-            fi
-          done
+          api="https://api.github.com/repos/official-stockfish/Stockfish/releases/latest"
+          # Ask the API for the current Linux x86-64 asset so a renamed release does not break the job.
+          asset=$(curl -fsSL "$api" | grep -oE 'stockfish-linux-x86-64[^"]*\.tar\.gz' | head -n1 || true)
+          if [ -n "${asset}" ]; then
+            url="https://github.com/official-stockfish/Stockfish/releases/latest/download/${asset}"
+          else
+            url="https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-linux-x86-64-universal.tar.gz"
+          fi
+          echo "Downloading ${url}"
+          curl -fsSL --retry 3 --retry-delay 2 -o /tmp/stockfish.tar "$url"
           mkdir -p /tmp/stockfish-dist
           tar -xf /tmp/stockfish.tar -C /tmp/stockfish-dist
           binary=$(find /tmp/stockfish-dist -type f -size +1M -name 'stockfish*' | head -n1)
-          install -m 755 "$binary" engines/stockfish
-          find /tmp/stockfish-dist -name '*.nnue' -exec cp {} engines/ \; || true
+          test -n "${binary}"
+          install -m 755 "${binary}" engines/stockfish
+          find /tmp/stockfish-dist -name '*.nnue' -exec cp {} engines/ \; 2>/dev/null || true
           printf 'uci\nquit\n' | ./engines/stockfish | grep -m1 'id name'
 
       - name: Check the token secret
@@ -74,7 +76,7 @@ jobs:
         run: |
           budget=$(( RUN_MINUTES * 60 ))
           echo "Running the bot for $(( budget / 60 )) minutes."
-          # SIGINT lets lichess-bot finish the current game state instead of leaving it abandoned.
+          # SIGINT lets lichess-bot finish the running game instead of abandoning it.
           timeout --signal=INT --kill-after=120s "$budget" \
             python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log \
             || echo "The bot stopped after its time budget."
