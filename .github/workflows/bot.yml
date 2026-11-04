@@ -43,11 +43,11 @@ jobs:
           set -euo pipefail
           mkdir -p engines
           api="https://api.github.com/repos/official-stockfish/Stockfish/releases/latest"
-          # Ask the API for the current Linux x86-64 asset so a renamed release does not break the job.
-          asset=$(curl -fsSL "$api" | grep -oE 'stockfish-linux-x86-64[^"]*\.tar\.gz' | head -n1 || true)
-          if [ -n "${asset}" ]; then
-            url="https://github.com/official-stockfish/Stockfish/releases/latest/download/${asset}"
-          else
+          # Take the exact asset URL the API reports, so a renamed or re-hosted release cannot break the job.
+          url=$(curl -fsSL "$api" \
+            | grep -oE '"browser_download_url": *"[^"]*stockfish-linux-x86-64[^"]*\.tar\.gz"' \
+            | head -n1 | sed -E 's/.*"(https:[^"]+)"/\1/' || true)
+          if [ -z "${url}" ]; then
             url="https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-linux-x86-64-universal.tar.gz"
           fi
           echo "Downloading ${url}"
