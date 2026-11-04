@@ -1,4 +1,4 @@
-﻿name: Lichess bot
+name: Lichess bot
 
 # GitHub Actions caps a single job at 6 hours, so the bot plays for about 5h45m and the next
 # scheduled run takes over. Cron runs are best-effort: expect 0-30 minutes of drift, which is

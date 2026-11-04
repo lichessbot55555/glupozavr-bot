@@ -1,4 +1,4 @@
-﻿# Local config with the real token and local logs are never committed.
+# Local config with the real token and local logs are never committed.
 *.yml
 !.github/workflows/*.yml
 !config.github.yml

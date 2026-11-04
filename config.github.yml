@@ -1,4 +1,4 @@
-﻿# Deployment config for GitHub Actions. The token comes from the LICHESS_BOT_TOKEN secret,
+# Deployment config for GitHub Actions. The token comes from the LICHESS_BOT_TOKEN secret,
 # because lichess-bot overrides `token` with that environment variable when it is present.
 token: "set-by-the-LICHESS_BOT_TOKEN-secret"
 url: "https://lichess.org/"
