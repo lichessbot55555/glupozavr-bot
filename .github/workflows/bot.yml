@@ -88,6 +88,12 @@ jobs:
             echo "::error::Add the bot token as the LICHESS_BOT_TOKEN repository secret."
             exit 1
           fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${LICHESS_BOT_TOKEN}" \
+            https://lichess.org/api/account)
+          if [ "$code" != "200" ]; then
+            echo "::error::LICHESS_BOT_TOKEN is rejected by lichess (HTTP $code). Create a new bot token at https://lichess.org/account/oauth/token and update the secret."
+            exit 1
+          fi
 
       - name: Play
         env:
@@ -105,6 +111,10 @@ jobs:
           set -e
           if [ "$code" -eq 0 ] || [ "$code" -eq 124 ] || [ "$code" -eq 130 ]; then
             echo "The bot stopped after its time budget (exit code $code)."
+            if grep -q "Quitting lichess-bot due to an error" bot.log 2>/dev/null; then
+              echo "::error::lichess-bot aborted with an error, see the log above."
+              exit 1
+            fi
           else
             echo "::error::lichess-bot exited with code $code"
             exit "$code"
