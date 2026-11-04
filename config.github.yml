@@ -35,6 +35,11 @@ engine:
   bullet_time_reserve: 2000
   bullet_move_overhead: 300
   bullet_ponder: false
+  # Runner networking is slow, so the bot starts playing fast moves earlier.
+  low_time_threshold: 8000
+  low_time_horizon: 30
+  low_time_min: 40
+  low_time_max: 250
   debug: false
   working_dir: ""
   protocol: "uci"

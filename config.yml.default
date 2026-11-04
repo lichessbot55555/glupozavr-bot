@@ -20,6 +20,10 @@ engine:                            # Engine settings.
   bullet_time_reserve: 1500         # Clock reserve in ms for standard 30+0 games.
   bullet_move_overhead:             # Network time per bullet move in ms. Empty means move_overhead.
   bullet_ponder: false              # Think on the opponent's time in standard 30+0 games.
+  low_time_threshold:               # Below this many ms the bot stops trusting the engine clock. Empty disables it.
+  low_time_horizon: 25              # In low time, spend about 1/low_time_horizon of the remaining clock.
+  low_time_min: 30                  # Floor per move in ms in low time.
+  low_time_max: 250                 # Ceiling per move in ms in low time.
   debug: False                     # When enabled, log all startup communication with the engine.
 # interpreter: "java"
 # interpreter_options:

@@ -169,6 +169,11 @@ def insert_default_values(CONFIG: CONFIG_DICT_TYPE) -> None:
     set_config_default(CONFIG, "engine", key="bullet_max_move_time", default=1000, force_empty_values=True)
     set_config_default(CONFIG, "engine", key="bullet_horizon", default=40, force_empty_values=True)
     set_config_default(CONFIG, "engine", key="bullet_move_overhead", default=None)
+    # Low time mode: below `low_time_threshold` ms the bot stops trusting the engine clock.
+    set_config_default(CONFIG, "engine", key="low_time_threshold", default=0, force_empty_values=True)
+    set_config_default(CONFIG, "engine", key="low_time_horizon", default=25, force_empty_values=True)
+    set_config_default(CONFIG, "engine", key="low_time_min", default=30, force_empty_values=True)
+    set_config_default(CONFIG, "engine", key="low_time_max", default=250, force_empty_values=True)
     change_value_to_list(CONFIG, "engine", key="interpreter_options")
     set_config_default(CONFIG, "engine", key="working_dir", default=os.getcwd(), force_empty_values=True)
     set_config_default(CONFIG, "engine", key="silence_stderr", default=False)
@@ -333,6 +338,11 @@ def validate_config(CONFIG: CONFIG_DICT_TYPE) -> None:
                       f"The standard chess engine {standard_engine} file does not exist.")
         config_assert(os.access(standard_engine, os.X_OK),
                       f"The standard chess engine {standard_engine} doesn't have execute (x) permission.")
+
+    if CONFIG["engine"].get("low_time_threshold"):
+        low_cfg = CONFIG["engine"]
+        config_warn(float(low_cfg["low_time_max"]) >= float(low_cfg["low_time_min"]),
+                    "engine.low_time_max should not be lower than engine.low_time_min.")
 
     if CONFIG["engine"].get("bullet_adaptive"):
         bullet_cfg = CONFIG["engine"]

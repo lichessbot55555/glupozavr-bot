@@ -831,12 +831,42 @@ def game_clock_time(board: chess.Board,
         logger.info(f"Searching for {msec_str(search_time)} in 30-second bullet for game {game.id}")
         return chess.engine.Limit(time=to_seconds(search_time), clock_id="30-second bullet")
 
+    low_time = low_time_limit(times[side], engine_cfg)
+    if low_time is not None:
+        logger.info(f"Searching for {msec_str(msec(round(low_time.time * 1000)))} in low time "
+                    f"({msec_str(times[side])} left) for game {game.id}")
+        return low_time
+
     logger.info(f"Searching for wtime {msec_str(times['wtime'])} btime {msec_str(times['btime'])} for game {game.id}")
     return chess.engine.Limit(white_clock=to_seconds(times["wtime"]),
                               black_clock=to_seconds(times["btime"]),
                               white_inc=to_seconds(msec(game.state["winc"])),
                               black_inc=to_seconds(msec(game.state["binc"])),
                               clock_id="real time")
+
+
+def low_time_limit(remaining: datetime.timedelta, engine_cfg: Configuration) -> chess.engine.Limit | None:
+    """
+    Take over the clock once too little time is left.
+
+    The engine manages its own clock, but it does not know how slow the connection is and it
+    keeps thinking in proportion to what it sees. Below `low_time_threshold` the bot instead
+    spends a fixed fraction of what is left, so it keeps playing fast moves and never flags.
+
+    :param remaining: The clock left for this move, with the network overhead already removed.
+    :param engine_cfg: The engine section of the config.
+    :return: The limit to use, or None when the threshold is not configured or not reached.
+    """
+    threshold = engine_cfg.low_time_threshold
+    if not threshold or remaining > msec(threshold):
+        return None
+
+    horizon = max(1, int(engine_cfg.low_time_horizon))
+    search_time = remaining / horizon
+    search_time = max(search_time, msec(engine_cfg.low_time_min))
+    search_time = min(search_time, msec(engine_cfg.low_time_max))
+    search_time = max(msec(15), min(search_time, remaining - msec(60)))
+    return chess.engine.Limit(time=to_seconds(search_time), clock_id="low time")
 
 
 def check_for_draw_offer(game: model.Game) -> bool:
