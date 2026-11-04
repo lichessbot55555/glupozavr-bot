@@ -1,0 +1,97 @@
+﻿name: Lichess bot
+
+# GitHub Actions caps a single job at 6 hours, so the bot plays for about 5h45m and the next
+# scheduled run takes over. Cron runs are best-effort: expect 0-30 minutes of drift, which is
+# why the bot stops itself well before the next start.
+
+on:
+  schedule:
+    - cron: "13 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "How long to run, in minutes"
+        required: false
+        default: "60"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lichess-bot
+  cancel-in-progress: false
+
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download Stockfish
+        run: |
+          mkdir -p engines
+          urls=(
+            "https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-linux-x86-64-universal.tar.gz"
+            "https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-ubuntu-x86-64-avx2.tar"
+          )
+          for url in "${urls[@]}"; do
+            if curl -fsSL --retry 3 -o /tmp/stockfish.tar "$url"; then
+              echo "Downloaded $url"
+              break
+            fi
+          done
+          mkdir -p /tmp/stockfish-dist
+          tar -xf /tmp/stockfish.tar -C /tmp/stockfish-dist
+          binary=$(find /tmp/stockfish-dist -type f -size +1M -name 'stockfish*' | head -n1)
+          install -m 755 "$binary" engines/stockfish
+          find /tmp/stockfish-dist -name '*.nnue' -exec cp {} engines/ \; || true
+          printf 'uci\nquit\n' | ./engines/stockfish | grep -m1 'id name'
+
+      - name: Check the token secret
+        env:
+          LICHESS_BOT_TOKEN: ${{ secrets.LICHESS_BOT_TOKEN }}
+        run: |
+          if [ -z "${LICHESS_BOT_TOKEN}" ]; then
+            echo "::error::Add the bot token as the LICHESS_BOT_TOKEN repository secret."
+            exit 1
+          fi
+
+      - name: Play
+        env:
+          LICHESS_BOT_TOKEN: ${{ secrets.LICHESS_BOT_TOKEN }}
+          RUN_MINUTES: ${{ inputs.minutes || 345 }}
+        run: |
+          budget=$(( RUN_MINUTES * 60 ))
+          echo "Running the bot for $(( budget / 60 )) minutes."
+          # SIGINT lets lichess-bot finish the current game state instead of leaving it abandoned.
+          timeout --signal=INT --kill-after=120s "$budget" \
+            python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log \
+            || echo "The bot stopped after its time budget."
+
+      - name: Show the end of the log
+        if: always()
+        run: |
+          echo "::group::Last 300 log lines"
+          tail -n 300 bot.log 2>/dev/null || echo "No log file."
+          echo "::endgroup::"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bot-run-${{ github.run_id }}
+          path: |
+            bot.log
+            game_records/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -1,0 +1,23 @@
+﻿# Local config with the real token and local logs are never committed.
+*.yml
+!.github/workflows/*.yml
+!config.github.yml
+**/__pycache__
+# Engine binaries are downloaded by the workflow instead of being committed.
+/engines/*
+!/engines/README.md
+!/engines/gm2001.bin
+lichess_bot_auto_logs/*
+.vscode/*
+.vs/*
+*.pgn
+*.log
+*.txt
+!requirements.txt
+!test_bot/test-requirements.txt
+TEMP/*
+# Python environments and engine sources stay local.
+venv/
+.venv/
+stockfish/
+stockfish-windows-x86-64-avx2/

@@ -1,0 +1,171 @@
+﻿# Deployment config for GitHub Actions. The token comes from the LICHESS_BOT_TOKEN secret,
+# because lichess-bot overrides `token` with that environment variable when it is present.
+token: "set-by-the-LICHESS_BOT_TOKEN-secret"
+url: "https://lichess.org/"
+
+# The blitz profile of this fork. A GitHub runner has 4 vCPUs, so the thread counts and the
+# move overhead are lower/larger than on the desktop this bot was tuned on.
+account_blitz:
+  enabled: true
+  username: "GlupoZavr"
+  max_base: 600
+  initial_time: 180
+  increment: 2
+  ponder: false
+  uci_options:
+    Threads: 3
+    Hash: 1024
+    Move Overhead: 300
+    Skill Level: 20
+    UCI_LimitStrength: false
+    MultiPV: 1
+
+engine:
+  dir: "./engines/"
+  # Only Stockfish is downloaded by the workflow, so standard chess and Chess960 work and
+  # variant games do not. Do not register this instance in variant arenas.
+  name: "stockfish"
+  standard_chess_name: "stockfish"
+  # Same adaptive allocator as on the desktop, but a longer horizon and a bigger overhead
+  # because runner networking is slower and jittery.
+  bullet_adaptive: true
+  bullet_horizon: 90
+  bullet_move_time: 50
+  bullet_max_move_time: 600
+  bullet_time_reserve: 2000
+  bullet_move_overhead: 300
+  bullet_ponder: false
+  debug: false
+  working_dir: ""
+  protocol: "uci"
+  ponder: false
+
+  polyglot:
+    enabled: true
+    book:
+      standard:
+        - "./engines/gm2001.bin"
+    min_weight: 0
+    selection: "best_move"
+    max_depth: 30
+    normalization: "none"
+
+  draw_or_resign:
+    resign_enabled: false
+    resign_score: -1000
+    resign_for_egtb_minus_two: false
+    resign_moves: 3
+    offer_draw_enabled: false
+    offer_draw_score: 0
+    offer_draw_for_egtb_zero: false
+    offer_draw_moves: 10
+    offer_draw_pieces: 10
+
+  online_moves:
+    max_out_of_book_moves: 0
+    max_retries: 0
+    chessdb_book:
+      enabled: false
+    lichess_cloud_analysis:
+      enabled: false
+    lichess_opening_explorer:
+      enabled: false
+    online_egtb:
+      enabled: false
+
+  # The 5-piece Syzygy tables live on the desktop only.
+  lichess_bot_tbs:
+    syzygy:
+      enabled: false
+      paths:
+        - "engines/syzygy"
+      max_pieces: 5
+      move_quality: "best"
+    gaviota:
+      enabled: false
+      paths:
+        - "engines/gaviota"
+      max_pieces: 5
+      min_dtm_to_consider_as_wdl_1: 120
+      move_quality: "best"
+
+  homemade_options:
+
+  uci_options:
+    Threads: 3
+    Hash: 1024
+    Move Overhead: 300
+    Skill Level: 20
+    UCI_LimitStrength: false
+    UCI_ShowWDL: false
+    MultiPV: 1
+
+  silence_stderr: false
+
+abort_time: 20
+fake_think_time: false
+rate_limiting_delay: 0
+move_overhead: 300
+max_takebacks_accepted: 0
+quit_after_all_games_finish: false
+
+correspondence:
+  move_time: 120
+  checkin_period: 300
+  disconnect_time: 150
+  ponder: false
+
+challenge:
+  concurrency: 1
+  sort_by: "best"
+  preference: "none"
+  accept_bot: true
+  only_bot: false
+  max_increment: 0
+  min_increment: 0
+  max_base: 30
+  min_base: 30
+  max_days: 14
+  min_days: 1
+  variants:
+    - standard
+    - chess960
+  time_controls:
+    - bullet
+  modes:
+    - casual
+    - rated
+  bullet_requires_increment: false
+  max_simultaneous_games_per_user: 1
+  recent_bot_challenge_age: 60
+  max_recent_bot_challenges: 1
+
+greeting:
+  hello: "Good luck!"
+  goodbye: "Good game!"
+  hello_spectators: "Hi!"
+  goodbye_spectators: "Thanks for watching!"
+
+pgn_directory: "game_records"
+pgn_file_grouping: "all"
+
+matchmaking:
+  allow_matchmaking: true
+  allow_during_games: false
+  rematch_opponents:
+    - "AlphaWolf_BOT"
+  challenge_variant: "random"
+  challenge_timeout: 10
+  challenge_idle_delay: 15
+  challenge_retry_delay: 15
+  challenge_initial_time:
+    - 30
+  challenge_increment:
+    - 0
+  opponent_min_rating: 2800
+  opponent_max_rating: 4000
+  opponent_rating_difference: 1000
+  rating_preference: "high"
+  challenge_mode: "rated"
+  challenge_filter: "fine"
+  include_challenge_block_list: false
