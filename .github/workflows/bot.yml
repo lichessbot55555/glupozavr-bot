@@ -100,25 +100,43 @@ jobs:
           LICHESS_BOT_TOKEN: ${{ secrets.LICHESS_BOT_TOKEN }}
           RUN_MINUTES: ${{ inputs.minutes || 350 }}
         run: |
-          budget=$(( RUN_MINUTES * 60 ))
-          echo "Running the bot for $(( budget / 60 )) minutes."
-          # SIGINT lets lichess-bot finish the running game instead of abandoning it.
-          # A crash must fail the job, so only the timeout exit codes are tolerated.
           set +e
-          timeout --signal=INT --kill-after=180s "$budget" \
-            python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log
-          code=$?
-          set -e
-          if [ "$code" -eq 0 ] || [ "$code" -eq 124 ] || [ "$code" -eq 130 ] || [ "$code" -eq 137 ]; then
-            echo "The bot stopped after its time budget (exit code $code)."
-            if grep -q "Quitting lichess-bot due to an error" bot.log 2>/dev/null; then
-              echo "::error::lichess-bot aborted with an error, see the log above."
-              exit 1
+          set -uo pipefail
+          deadline=$(( $(date +%s) + RUN_MINUTES * 60 ))
+          attempt=0
+          fast_failures=0
+          while :; do
+            remaining=$(( deadline - $(date +%s) ))
+            if [ "$remaining" -lt 120 ]; then
+              echo "Time budget spent."
+              break
             fi
-          else
-            echo "::error::lichess-bot exited with code $code"
-            exit "$code"
-          fi
+            attempt=$(( attempt + 1 ))
+            echo "Starting lichess-bot (attempt ${attempt}, ${remaining} s left)."
+            started=$(date +%s)
+            # SIGINT lets lichess-bot finish the running game instead of abandoning it.
+            timeout --signal=INT --kill-after=180s "$remaining" \
+              python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log
+            code=$?
+            ran=$(( $(date +%s) - started ))
+            # 124, 130 and 137 mean the scheduler stopped the bot on purpose.
+            if [ "$code" -eq 0 ] || [ "$code" -ge 124 ]; then
+              echo "lichess-bot stopped after ${ran} s (code ${code})."
+              break
+            fi
+            echo "::warning::lichess-bot exited with code ${code} after ${ran} s."
+            if [ "$ran" -lt 60 ]; then
+              fast_failures=$(( fast_failures + 1 ))
+              if [ "$fast_failures" -ge 3 ]; then
+                echo "::error::lichess-bot keeps failing right after start, stopping the job."
+                exit 1
+              fi
+            else
+              fast_failures=0
+            fi
+            echo "Restarting in 15 s."
+            sleep 15
+          done
 
       - name: Show the end of the log
         if: always()

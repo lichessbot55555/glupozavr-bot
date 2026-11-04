@@ -1,0 +1,34 @@
+name: Check play step
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Extract and syntax check the play script
+        run: |
+          python - <<'EOF'
+          import pathlib, yaml
+          wf = yaml.safe_load(open(".github/workflows/bot.yml", encoding="utf-8"))
+          step = [s for s in wf["jobs"]["play"]["steps"] if s.get("name") == "Play"][0]
+          pathlib.Path("/tmp/play.sh").write_text(step["run"], encoding="utf-8")
+          print("extracted", len(step["run"]), "chars")
+          EOF
+          bash -n /tmp/play.sh && echo "SYNTAX OK"
+
+      - name: Simulate a crash and a restart
+        run: |
+          mkdir -p /tmp/stub
+          printf '#!/bin/bash\nif [ ! -f /tmp/stub/ran ]; then touch /tmp/stub/ran; echo "stub: crashing"; exit 1; fi\necho "stub: running"\nsleep 600\n' > /tmp/stub/python
+          chmod +x /tmp/stub/python
+          sed -i 's/remaining -lt 120/remaining -lt 1/' /tmp/play.sh
+          PATH=/tmp/stub:$PATH RUN_MINUTES=1 timeout 90 bash /tmp/play.sh
+          echo "--- loop finished with code $? ---"
