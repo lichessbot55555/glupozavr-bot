@@ -75,7 +75,10 @@ jobs:
           echo "Downloading ${url}"
           curl -fsSL --retry 3 --retry-delay 2 -o engines/fairy-stockfish "$url"
           chmod +x engines/fairy-stockfish
-          printf 'uci\nquit\n' | ./engines/fairy-stockfish | grep -m1 'id name'
+          printf 'uci\nquit\n' | ./engines/fairy-stockfish > /tmp/fairy-uci.txt
+          grep -m1 'id name' /tmp/fairy-uci.txt
+          # Fails the job if this build cannot play atomic, before any game is started.
+          grep -q 'var atomic' /tmp/fairy-uci.txt
 
       - name: Check the token secret
         env:
