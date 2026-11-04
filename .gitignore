@@ -1,6 +1,8 @@
 # Local config with the real token and local logs are never committed.
 *.yml
 !.github/workflows/*.yml
+!/.github/dependabot.yml
+!/lib/versioning.yml
 !config.github.yml
 **/__pycache__
 # Engine binaries are downloaded by the workflow instead of being committed.

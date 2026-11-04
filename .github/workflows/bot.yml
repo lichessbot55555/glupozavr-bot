@@ -97,9 +97,18 @@ jobs:
           budget=$(( RUN_MINUTES * 60 ))
           echo "Running the bot for $(( budget / 60 )) minutes."
           # SIGINT lets lichess-bot finish the running game instead of abandoning it.
+          # A crash must fail the job, so only the timeout exit codes are tolerated.
+          set +e
           timeout --signal=INT --kill-after=120s "$budget" \
-            python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log \
-            || echo "The bot stopped after its time budget."
+            python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ] || [ "$code" -eq 124 ] || [ "$code" -eq 130 ]; then
+            echo "The bot stopped after its time budget (exit code $code)."
+          else
+            echo "::error::lichess-bot exited with code $code"
+            exit "$code"
+          fi
 
       - name: Show the end of the log
         if: always()
