@@ -1,12 +1,12 @@
 name: Lichess bot
 
-# GitHub Actions caps a single job at 6 hours, so the bot plays for about 5h45m and the next
-# scheduled run takes over. Cron runs are best-effort: expect 0-30 minutes of drift, which is
-# why the bot stops itself well before the next start.
+# GitHub Actions caps a single job at 6 hours, so the bot plays for about 5h45m. The cron runs
+# every hour and the concurrency group keeps one run queued, so the next run starts as soon as
+# the active one stops. That also restarts the bot automatically after a crash.
 
 on:
   schedule:
-    - cron: "13 */6 * * *"
+    - cron: "13 * * * *"
   workflow_dispatch:
     inputs:
       minutes:
@@ -105,11 +105,11 @@ jobs:
           # SIGINT lets lichess-bot finish the running game instead of abandoning it.
           # A crash must fail the job, so only the timeout exit codes are tolerated.
           set +e
-          timeout --signal=INT --kill-after=120s "$budget" \
+          timeout --signal=INT --kill-after=240s "$budget" \
             python lichess-bot.py --config config.github.yml --disable_auto_logging -l bot.log
           code=$?
           set -e
-          if [ "$code" -eq 0 ] || [ "$code" -eq 124 ] || [ "$code" -eq 130 ]; then
+          if [ "$code" -eq 0 ] || [ "$code" -eq 124 ] || [ "$code" -eq 130 ] || [ "$code" -eq 137 ]; then
             echo "The bot stopped after its time budget (exit code $code)."
             if grep -q "Quitting lichess-bot due to an error" bot.log 2>/dev/null; then
               echo "::error::lichess-bot aborted with an error, see the log above."
