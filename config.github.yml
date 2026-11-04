@@ -22,9 +22,9 @@ account_blitz:
 
 engine:
   dir: "./engines/"
-  # Only Stockfish is downloaded by the workflow, so standard chess and Chess960 work and
-  # variant games do not. Do not register this instance in variant arenas.
-  name: "stockfish"
+  # The workflow downloads both engines: Stockfish for standard chess and Chess960, and
+  # Fairy-Stockfish for the variants (atomic, crazyhouse, ...). This mirrors the desktop setup.
+  name: "fairy-stockfish"
   standard_chess_name: "stockfish"
   # Same adaptive allocator as on the desktop, but a longer horizon and a bigger overhead
   # because runner networking is slower and jittery.
@@ -97,7 +97,6 @@ engine:
     Move Overhead: 300
     Skill Level: 20
     UCI_LimitStrength: false
-    UCI_ShowWDL: false
     MultiPV: 1
 
   silence_stderr: false

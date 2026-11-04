@@ -60,6 +60,23 @@ jobs:
           find /tmp/stockfish-dist -name '*.nnue' -exec cp {} engines/ \; 2>/dev/null || true
           printf 'uci\nquit\n' | ./engines/stockfish | grep -m1 'id name'
 
+      - name: Download Fairy-Stockfish
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/fairy-stockfish/Fairy-Stockfish/releases/latest"
+          # The Linux build has no file extension. The closing quote in the pattern skips the
+          # .exe, -bmi2 and -modern builds, which are different files for the same release.
+          url=$(curl -fsSL "$api" \
+            | grep -oE '"browser_download_url": *"[^"]*/fairy-stockfish-largeboard_x86-64"' \
+            | head -n1 | sed -E 's/.*"(https:[^"]+)"/\1/' || true)
+          if [ -z "${url}" ]; then
+            url="https://github.com/fairy-stockfish/Fairy-Stockfish/releases/latest/download/fairy-stockfish-largeboard_x86-64"
+          fi
+          echo "Downloading ${url}"
+          curl -fsSL --retry 3 --retry-delay 2 -o engines/fairy-stockfish "$url"
+          chmod +x engines/fairy-stockfish
+          printf 'uci\nquit\n' | ./engines/fairy-stockfish | grep -m1 'id name'
+
       - name: Check the token secret
         env:
           LICHESS_BOT_TOKEN: ${{ secrets.LICHESS_BOT_TOKEN }}
