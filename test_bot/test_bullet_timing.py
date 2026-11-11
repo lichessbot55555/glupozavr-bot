@@ -51,14 +51,14 @@ def test_30_second_bullet_protects_clock_reserve() -> None:
     assert first_move_time(game, config).time == 0.25
 
 
-def test_adaptive_bullet_only_applies_to_standard_bullet_games() -> None:
-    """Only standard bullet games use the adaptive allocator."""
+def test_adaptive_bullet_applies_to_every_bullet_game() -> None:
+    """Every bullet game uses the adaptive allocator, including the variant arenas."""
     config = adaptive_config()
     game = bullet_game()
     assert uses_bullet_clock(game, config)
 
     game.variant_name = "Atomic"
-    assert not uses_bullet_clock(game, config)
+    assert uses_bullet_clock(game, config)
 
     game.variant_name = "Standard"
     game.speed = "blitz"
@@ -66,6 +66,27 @@ def test_adaptive_bullet_only_applies_to_standard_bullet_games() -> None:
 
     game.speed = "bullet"
     assert not uses_bullet_clock(game, Configuration({"bullet_move_time": 150}))
+
+
+def test_variant_bullet_uses_the_shorter_horizon() -> None:
+    """Variants end much faster, so they spend a bigger share of the clock per move."""
+    config = Configuration({"bullet_adaptive": True,
+                            "bullet_horizon": 64,
+                            "bullet_variant_horizon": 32,
+                            "bullet_move_time": 50,
+                            "bullet_max_move_time": 900,
+                            "bullet_time_reserve": 2000,
+                            "bullet_move_overhead": 100})
+    board = chess.Board()
+    board.push_uci("e2e4")
+
+    standard = bullet_clock_time(board, bullet_game(), Timer(), msec(200), config)
+    atomic_game = bullet_game()
+    atomic_game.variant_name = "Atomic"
+    atomic = bullet_clock_time(board, atomic_game, Timer(), msec(200), config)
+
+    assert atomic.time > standard.time * 1.8
+    assert atomic.time <= 0.9
 
 
 def test_adaptive_bullet_spends_more_time_than_the_fixed_rule() -> None:

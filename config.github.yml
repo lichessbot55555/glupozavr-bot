@@ -16,8 +16,6 @@ account_blitz:
     Threads: 3
     Hash: 1024
     Move Overhead: 300
-    Skill Level: 20
-    UCI_LimitStrength: false
     MultiPV: 1
 
 engine:
@@ -26,12 +24,17 @@ engine:
   # Fairy-Stockfish for the variants (atomic, crazyhouse, ...). This mirrors the desktop setup.
   name: "fairy-stockfish"
   standard_chess_name: "stockfish"
+  # Atomic gets its own engine: Atomic-Stockfish scores about +150 Elo over
+  # Fairy-Stockfish at bullet speeds in its author's tests.
+  variant_engines:
+    atomic: "atomic-stockfish"
   # Same adaptive allocator as on the desktop, but a longer horizon and a bigger overhead
   # because runner networking is slower and jittery.
   bullet_adaptive: true
   bullet_horizon: 90
+  bullet_variant_horizon: 32
   bullet_move_time: 50
-  bullet_max_move_time: 600
+  bullet_max_move_time: 900
   bullet_time_reserve: 2000
   bullet_move_overhead: 300
   bullet_ponder: false
@@ -100,8 +103,6 @@ engine:
     Threads: 3
     Hash: 1024
     Move Overhead: 300
-    Skill Level: 20
-    UCI_LimitStrength: false
     MultiPV: 1
 
   silence_stderr: false

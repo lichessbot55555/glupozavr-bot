@@ -160,6 +160,7 @@ def insert_default_values(CONFIG: CONFIG_DICT_TYPE) -> None:
     set_config_default(CONFIG, "engine", key="interpreter", default=None)
     set_config_default(CONFIG, "engine", key="interpreter_options", default=[], force_empty_values=True)
     set_config_default(CONFIG, "engine", key="standard_chess_name", default=None)
+    set_config_default(CONFIG, "engine", key="variant_engines", default={}, force_empty_values=True)
     set_config_default(CONFIG, "engine", key="bullet_move_time", default=None, force_empty_values=True)
     set_config_default(CONFIG, "engine", key="bullet_time_reserve", default=1500, force_empty_values=True)
     set_config_default(CONFIG, "engine", key="bullet_ponder", default=False)
@@ -168,6 +169,7 @@ def insert_default_values(CONFIG: CONFIG_DICT_TYPE) -> None:
     set_config_default(CONFIG, "engine", key="bullet_adaptive", default=False)
     set_config_default(CONFIG, "engine", key="bullet_max_move_time", default=1000, force_empty_values=True)
     set_config_default(CONFIG, "engine", key="bullet_horizon", default=40, force_empty_values=True)
+    set_config_default(CONFIG, "engine", key="bullet_variant_horizon", default=32, force_empty_values=True)
     set_config_default(CONFIG, "engine", key="bullet_move_overhead", default=None)
     # Low time mode: below `low_time_threshold` ms the bot stops trusting the engine clock.
     set_config_default(CONFIG, "engine", key="low_time_threshold", default=0, force_empty_values=True)
@@ -343,6 +345,13 @@ def validate_config(CONFIG: CONFIG_DICT_TYPE) -> None:
         low_cfg = CONFIG["engine"]
         config_warn(float(low_cfg["low_time_max"]) >= float(low_cfg["low_time_min"]),
                     "engine.low_time_max should not be lower than engine.low_time_min.")
+
+    for variant, variant_engine in (CONFIG["engine"].get("variant_engines") or {}).items():
+        variant_path = os.path.join(CONFIG["engine"]["dir"], str(variant_engine))
+        config_assert(os.path.isfile(variant_path),
+                      f"The engine for the `{variant}` variant, {variant_path}, does not exist.")
+        config_assert(os.access(variant_path, os.X_OK),
+                      f"The engine for the `{variant}` variant, {variant_path}, has no execute permission.")
 
     if CONFIG["engine"].get("bullet_adaptive"):
         bullet_cfg = CONFIG["engine"]

@@ -35,6 +35,34 @@ out_of_online_opening_book_moves: Counter[str] = Counter()
 # previous time handling because the arena opponents there are tuned differently.
 BULLET_VARIANTS = {"Standard", "From Position"}
 
+# Variants that the standard chess engine covers. Everything else needs a variant engine.
+STANDARD_VARIANTS = {"Standard", "From Position", "Chess960"}
+
+
+def engine_binary_name(engine_config: Configuration, game: model.Game | None = None) -> str:
+    """
+    Return the engine binary to start for a game.
+
+    Modern Stockfish is considerably stronger than the older Fairy-Stockfish build in
+    standard chess and Chess960. Fairy-Stockfish is still required for variants such as
+    crazyhouse, horde and racing kings, but a variant can name a specialized engine of its
+    own through `engine.variant_engines` (atomic uses Atomic-Stockfish).
+
+    :param engine_config: The bot config.
+    :param game: The game to pick an engine for, or None for the default engine.
+    :return: The binary name inside `engine.dir`.
+    """
+    cfg = engine_config.engine
+    if game is not None:
+        variant_engines = cfg.lookup("variant_engines")
+        if isinstance(variant_engines, Configuration):
+            override = variant_engines.lookup(game.variant_name.casefold())
+            if override:
+                return str(override)
+        if game.variant_name in STANDARD_VARIANTS:
+            return str(cfg.standard_chess_name or cfg.name)
+    return str(cfg.name)
+
 
 def create_engine(engine_config: Configuration, game: model.Game | None = None) -> EngineWrapper:
     """
@@ -47,13 +75,7 @@ def create_engine(engine_config: Configuration, game: model.Game | None = None) 
     :return: An engine. Either UCI, XBoard, or Homemade.
     """
     cfg = engine_config.engine
-    # Modern Stockfish is considerably stronger than the older Fairy-Stockfish
-    # build in standard chess and Chess960. Fairy-Stockfish is still required
-    # for variants such as atomic, crazyhouse, horde and racing kings.
-    standard_variants = {"Standard", "From Position", "Chess960"}
-    engine_name = cfg.name
-    if game is not None and game.variant_name in standard_variants:
-        engine_name = cfg.standard_chess_name or cfg.name
+    engine_name = engine_binary_name(engine_config, game)
 
     engine_path = os.path.abspath(os.path.join(cfg.dir, engine_name))
     engine_type = cfg.protocol
@@ -697,12 +719,10 @@ def uses_bullet_clock(game: model.Game, engine_cfg: Configuration) -> bool:
     """
     Whether this game should use the adaptive bullet clock allocator.
 
-    Only standard-like bullet games are affected, so blitz, correspondence and the variant
-    arenas keep their previous behaviour.
+    Every bullet game is covered, including the variant arenas. Blitz, correspondence and
+    games without a clock keep their previous behaviour.
     """
-    return (bool(engine_cfg.bullet_adaptive)
-            and getattr(game, "speed", None) == "bullet"
-            and game.variant_name in BULLET_VARIANTS)
+    return bool(engine_cfg.bullet_adaptive) and getattr(game, "speed", None) == "bullet"
 
 
 def bullet_clock_time(board: chess.Board,
@@ -714,11 +734,14 @@ def bullet_clock_time(board: chess.Board,
     Spend a fixed fraction of the remaining bullet clock on every move.
 
     The old behaviour spent a constant `bullet_move_time` per move and left a median of
-    18 s out of a 30+0 clock untouched. Spending `1 / bullet_horizon` of what is left
-    instead keeps the same clock for the rest of the game, so the search time scales with
-    the actual game length: about 600 ms on the first move and about 250 ms on average,
-    for roughly 1.7x the search depth of the constant-time scheme. The per-move ceiling,
-    the shrinking floor and the 120 ms guard keep long games from flagging.
+    18 s out of a 30+0 clock untouched. Spending `1 / horizon` of what is left instead keeps
+    the same clock for the rest of the game, so the search time scales with the actual game
+    length. The per-move ceiling, the shrinking floor and the 120 ms guard keep long games
+    from flagging.
+
+    Variant games end much faster than standard ones (an atomic game lasts about 21 of our
+    moves instead of 58), so they get their own, much shorter horizon and therefore a bigger
+    share of the clock per move.
 
     :param board: The current position.
     :param game: The game that the bot is playing.
@@ -735,16 +758,20 @@ def bullet_clock_time(board: chess.Board,
     increment = msec(game.state[wbinc(board)])
     reserve = msec(engine_cfg.bullet_time_reserve)
 
+    horizon = int(engine_cfg.bullet_horizon)
+    if game.variant_name not in BULLET_VARIANTS:
+        horizon = int(engine_cfg.bullet_variant_horizon or horizon)
+
     # The reserve only takes a slice of a small clock, so a long game degrades smoothly instead of stopping dead.
     usable = remaining - min(reserve, remaining * 0.10)
-    search_time = usable / max(1, int(engine_cfg.bullet_horizon)) + increment * 0.8
+    search_time = usable / max(1, horizon) + increment * 0.8
     search_time = min(search_time, msec(engine_cfg.bullet_max_move_time))
     search_time = max(search_time, min(msec(engine_cfg.bullet_move_time), remaining * 0.03))
     search_time = min(search_time, remaining * 0.15)
     search_time = max(msec(15), min(search_time, remaining - msec(120)))
 
     logger.info(f"Searching for {msec_str(search_time)} in bullet for game {game.id}"
-                f" ({msec_str(remaining)} left)")
+                f" ({msec_str(remaining)} left, horizon {horizon})")
     return chess.engine.Limit(time=to_seconds(search_time), clock_id="bullet")
 
 

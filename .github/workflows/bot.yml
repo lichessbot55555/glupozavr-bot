@@ -63,22 +63,53 @@ jobs:
       - name: Download Fairy-Stockfish
         run: |
           set -euo pipefail
-          api="https://api.github.com/repos/fairy-stockfish/Fairy-Stockfish/releases/latest"
-          # The Linux build has no file extension. The closing quote in the pattern skips the
-          # .exe, -bmi2 and -modern builds, which are different files for the same release.
-          url=$(curl -fsSL "$api" \
-            | grep -oE '"browser_download_url": *"[^"]*/fairy-stockfish-largeboard_x86-64"' \
-            | head -n1 | sed -E 's/.*"(https:[^"]+)"/\1/' || true)
-          if [ -z "${url}" ]; then
-            url="https://github.com/fairy-stockfish/Fairy-Stockfish/releases/latest/download/fairy-stockfish-largeboard_x86-64"
-          fi
-          echo "Downloading ${url}"
-          curl -fsSL --retry 3 --retry-delay 2 -o engines/fairy-stockfish "$url"
-          chmod +x engines/fairy-stockfish
-          printf 'uci\nquit\n' | ./engines/fairy-stockfish > /tmp/fairy-uci.txt
-          grep -m1 'id name' /tmp/fairy-uci.txt
-          # Fails the job if this build cannot play atomic, before any game is started.
+          base="https://github.com/fairy-stockfish/Fairy-Stockfish/releases/latest/download"
+          # The Linux builds have no file extension. bmi2 is 10-20% faster, but it needs CPU
+          # support, so fall back to the generic build when it cannot run on the runner.
+          for build in fairy-stockfish-largeboard_x86-64-bmi2 fairy-stockfish-largeboard_x86-64; do
+            echo "Trying ${build}"
+            if ! curl -fsSL --retry 3 --retry-delay 2 -o engines/fairy-stockfish "${base}/${build}"; then
+              echo "::warning::Download failed for ${build}"
+              continue
+            fi
+            chmod +x engines/fairy-stockfish
+            if printf 'uci\nquit\n' | ./engines/fairy-stockfish > /tmp/fairy-uci.txt 2>/dev/null \
+               && grep -q 'var atomic' /tmp/fairy-uci.txt; then
+              grep -m1 'id name' /tmp/fairy-uci.txt
+              echo "Using ${build}"
+              break
+            fi
+            echo "::warning::${build} does not run here, trying the next build"
+            rm -f engines/fairy-stockfish
+          done
+          # Fail before any game is started rather than in the middle of an atomic game.
+          test -x engines/fairy-stockfish
           grep -q 'var atomic' /tmp/fairy-uci.txt
+
+      - name: Download Atomic-Stockfish
+        run: |
+          set -euo pipefail
+          base="https://github.com/Belzedar94/Atomic-Stockfish/releases/download/rolling-main"
+          # Specialized atomic engine, about +150 Elo over Fairy-Stockfish at bullet speeds.
+          # bmi2 is the fastest build, the others are fallbacks for weaker runner CPUs.
+          for build in atomic-stockfish-linux-x86-64-bmi2 atomic-stockfish-linux-x86-64-avx2 atomic-stockfish-linux-x86-64-sse41-popcnt; do
+            echo "Trying ${build}"
+            if ! curl -fsSL --retry 3 --retry-delay 2 -o engines/atomic-stockfish "${base}/${build}"; then
+              echo "::warning::Download failed for ${build}"
+              continue
+            fi
+            chmod +x engines/atomic-stockfish
+            if printf 'uci\nquit\n' | ./engines/atomic-stockfish > /tmp/atomic-uci.txt 2>/dev/null \
+               && grep -q 'UCI_Variant' /tmp/atomic-uci.txt; then
+              grep -m1 'id name' /tmp/atomic-uci.txt
+              echo "Using ${build}"
+              break
+            fi
+            echo "::warning::${build} does not run here, trying the next build"
+            rm -f engines/atomic-stockfish
+          done
+          test -x engines/atomic-stockfish
+          grep -q 'UCI_Variant' /tmp/atomic-uci.txt
 
       - name: Check the token secret
         env:

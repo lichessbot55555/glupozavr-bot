@@ -13,10 +13,12 @@ account_blitz:
 engine:                            # Engine settings.
   dir: "./engines/"                # Directory containing the engine. This can be an absolute path or one relative to lichess-bot/.
   name: "engine_name"              # Binary name of the engine to use.
+  variant_engines: {}              # Per-variant engine binaries, e.g. {atomic: "atomic-stockfish"}.
   bullet_adaptive: false            # Spread the remaining bullet clock over the rest of the game.
   bullet_move_time:                 # Fixed search cap in ms, or the per-move floor when bullet_adaptive is on.
   bullet_max_move_time: 1000        # Per-move ceiling in ms for the adaptive bullet clock.
   bullet_horizon: 40                # Spend about 1/bullet_horizon of the remaining clock on every move.
+  bullet_variant_horizon: 32        # Same, for the variant arenas, where games are much shorter.
   bullet_time_reserve: 1500         # Clock reserve in ms for standard 30+0 games.
   bullet_move_overhead:             # Network time per bullet move in ms. Empty means move_overhead.
   bullet_ponder: false              # Think on the opponent's time in standard 30+0 games.
