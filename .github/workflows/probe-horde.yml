@@ -1,0 +1,23 @@
+name: Probe horde
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe
+        run: |
+          curl -fsSL -o /tmp/h.tar.xz https://github.com/Belzedar94/Horde-Stockfish/releases/download/v1.0.0/Horde-Stockfish-1.0.0-linux-x86-64-bmi2.tar.xz
+          mkdir -p /tmp/h
+          tar -xf /tmp/h.tar.xz -C /tmp/h
+          BIN=$(find /tmp/h -type f -name horde-stockfish | head -n1)
+          echo "binary: $BIN"
+          chmod +x "$BIN"
+          echo "--- ldd ---"
+          ldd "$BIN" 2>&1 | head -n 10
+          echo "--- uci ---"
+          printf 'uci\nquit\n' | "$BIN" 2>&1 | head -n 20
+          echo "--- bench ---"
+          "$BIN" bench 16 1 1 2>&1 | tail -n 8
