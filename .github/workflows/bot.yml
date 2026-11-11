@@ -111,6 +111,39 @@ jobs:
           test -x engines/atomic-stockfish
           grep -q 'UCI_Variant' /tmp/atomic-uci.txt
 
+      - name: Download Horde-Stockfish
+        run: |
+          set -euo pipefail
+          base="https://github.com/Belzedar94/Horde-Stockfish/releases/download/v1.0.0"
+          # Horde-Stockfish scores about +350 Elo over Fairy-Stockfish in its author's
+          # release panel. The archive ships the engine and its network separately, and the
+          # engine looks for the network next to its own binary, so both land in engines/.
+          for build in Horde-Stockfish-1.0.0-linux-x86-64-bmi2 Horde-Stockfish-1.0.0-linux-x86-64-avx2; do
+            echo "Trying ${build}"
+            if ! curl -fsSL --retry 3 --retry-delay 2 -o /tmp/horde.tar.xz "${base}/${build}.tar.xz"; then
+              echo "::warning::Download failed for ${build}"
+              continue
+            fi
+            rm -rf /tmp/horde-dist && mkdir -p /tmp/horde-dist
+            tar -xf /tmp/horde.tar.xz -C /tmp/horde-dist
+            binary=$(find /tmp/horde-dist -type f -name 'horde-stockfish' | head -n1)
+            network=$(find /tmp/horde-dist -type f -name '*.nnue' | head -n1)
+            test -n "${binary}" && test -n "${network}"
+            install -m 755 "${binary}" engines/horde-stockfish
+            cp "${network}" engines/
+            if printf 'uci\nquit\n' | ./engines/horde-stockfish > /tmp/horde-uci.txt 2>/dev/null \
+               && grep -q 'UCI_Variant' /tmp/horde-uci.txt \
+               && ./engines/horde-stockfish bench 16 1 1 2>/dev/null | grep -q 'Nodes/second'; then
+              grep -m1 'id name' /tmp/horde-uci.txt
+              echo "Using ${build}"
+              break
+            fi
+            echo "::warning::${build} does not run here, trying the next build"
+            rm -f engines/horde-stockfish engines/*.nnue
+          done
+          test -x engines/horde-stockfish
+          ls -1 engines/*.nnue
+
       - name: Check the token secret
         env:
           LICHESS_BOT_TOKEN: ${{ secrets.LICHESS_BOT_TOKEN }}

@@ -12,9 +12,10 @@
   медленнее и с джиттером. В пуле 30+0 это заметно, поэтому `config.github.yml` настроен
   консервативнее (`Threads: 3`, `bullet_horizon: 90`, `bullet_move_overhead: 300`).
   Рейтинг в пуле на раннере, скорее всего, будет **ниже** локального.
-- **Два движка, как на десктопе.** Workflow скачивает Stockfish (standard и Chess960) и
-  Fairy-Stockfish (варианты: atomic, crazyhouse и остальные). Вариантные партии идут через
-  Fairy-Stockfish, поэтому арены вроде Atomic Go Arena работают. Fairy-Stockfish 14 — это
+- **Четыре движка.** Workflow скачивает Stockfish (standard и Chess960), Fairy-Stockfish
+  (остальные варианты), Atomic-Stockfish (atomic) и Horde-Stockfish (horde). Вариант
+  выбирает движок через `engine.variant_engines`. Специализированные сборки заметно сильнее
+  Fairy: atomic ~+150 Elo, horde ~+350 Elo по замерам их автора. Fairy-Stockfish 14 — это
   последний официальный релиз (2021), он же стоит у вас локально.
 - **Один инстанс на аккаунт.** Не запускайте облачного бота одновременно с локальным:
   два процесса будут наперегонки вызывать соперников и играть в одни и те же партии.

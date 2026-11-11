@@ -15,7 +15,8 @@ def engine_config(**engine: object) -> Configuration:
 def pick(variant: str) -> str:
     """Return the binary that the bot would start for this variant."""
     config = engine_config(standard_chess_name="stockfish",
-                           variant_engines={"atomic": "atomic-stockfish"})
+                           variant_engines={"atomic": "atomic-stockfish",
+                                            "horde": "horde-stockfish"})
     return engine_binary_name(config, SimpleNamespace(variant_name=variant))
 
 
@@ -29,6 +30,11 @@ def test_standard_and_chess960_use_stockfish() -> None:
     assert pick("Standard") == "stockfish"
     assert pick("Chess960") == "stockfish"
     assert pick("From Position") == "stockfish"
+
+
+def test_horde_uses_its_own_engine() -> None:
+    """Horde gets the specialized engine as well."""
+    assert pick("Horde") == "horde-stockfish"
 
 
 def test_other_variants_fall_back_to_fairy() -> None:

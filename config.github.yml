@@ -28,6 +28,7 @@ engine:
   # Fairy-Stockfish at bullet speeds in its author's tests.
   variant_engines:
     atomic: "atomic-stockfish"
+    horde: "horde-stockfish"
   # Same adaptive allocator as on the desktop, but a longer horizon and a bigger overhead
   # because runner networking is slower and jittery.
   bullet_adaptive: true
