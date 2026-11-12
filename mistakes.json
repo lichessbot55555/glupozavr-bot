@@ -1,1 +1,54 @@
-﻿{"version": 1, "positions": {}}
+{
+"positions": {
+"08b77053c7b3f184": {
+"bad": {
+"a4a3": 97646
+},
+"good": "c2b1",
+"seen": 1
+},
+"588c277d1ef897a0": {
+"bad": {
+"e6e5": 251
+},
+"good": "b4c2",
+"seen": 1
+},
+"6231e62edb1443cf": {
+"bad": {
+"e7e6": 419
+},
+"good": "b7b5",
+"seen": 1
+},
+"bf614cbcea11e9fc": {
+"bad": {
+"f8f7": 180
+},
+"good": "c5c4",
+"seen": 1
+},
+"de63a51de9d50bb1": {
+"bad": {
+"f5h4": 155
+},
+"good": "f8d6",
+"seen": 1
+},
+"f4d4981c9994927d": {
+"bad": {
+"c6c5": 98184
+},
+"good": "e4e3",
+"seen": 1
+},
+"fce084a21a3e66b6": {
+"bad": {
+"d7d5": 260
+},
+"good": "e7e6",
+"seen": 1
+}
+},
+"version": 1
+}
