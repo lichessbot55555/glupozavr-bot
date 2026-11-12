@@ -9,6 +9,8 @@
 /engines/*
 !/engines/README.md
 !/engines/gm2001.bin
+!/engines/atomic.bin
+!/engines/horde.bin
 lichess_bot_auto_logs/*
 .vscode/*
 .vs/*

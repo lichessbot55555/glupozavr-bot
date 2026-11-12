@@ -54,6 +54,12 @@ engine:
     book:
       standard:
         - "./engines/gm2001.bin"
+      # Generated from each specialized engine's own lines by tools/make_variant_book.py,
+      # so the first moves are instant and the bot saves its bullet clock.
+      atomic:
+        - "./engines/atomic.bin"
+      horde:
+        - "./engines/horde.bin"
     min_weight: 0
     selection: "best_move"
     max_depth: 30

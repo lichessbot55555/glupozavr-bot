@@ -12,6 +12,9 @@
   медленнее и с джиттером. В пуле 30+0 это заметно, поэтому `config.github.yml` настроен
   консервативнее (`Threads: 3`, `bullet_horizon: 90`, `bullet_move_overhead: 300`).
   Рейтинг в пуле на раннере, скорее всего, будет **ниже** локального.
+- **Дебютные книги для вариантов.** `engines/atomic.bin` и `engines/horde.bin` собраны из
+  собственных линий движков скриптом `tools/make_variant_book.py`, поэтому первые ~6 ходов
+  бот играет мгновенно и не тратит пулевые часы.
 - **Четыре движка.** Workflow скачивает Stockfish (standard и Chess960), Fairy-Stockfish
   (остальные варианты), Atomic-Stockfish (atomic) и Horde-Stockfish (horde). Вариант
   выбирает движок через `engine.variant_engines`. Специализированные сборки заметно сильнее
