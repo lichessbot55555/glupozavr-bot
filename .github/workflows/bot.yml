@@ -15,7 +15,7 @@ on:
         default: "350"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: lichess-bot
@@ -214,6 +214,36 @@ jobs:
             echo "Restarting in 15 s."
             sleep 15
           done
+
+      - name: Learn from the games
+        if: always()
+        continue-on-error: true
+        run: |
+          # Analyse the games of this session and remember every blunder.
+          python tools/learn_mistakes.py \
+            --pgn "game_records/GlupoZavr games.pgn" \
+            --book mistakes.json \
+            --config config.github.yml \
+            --username GlupoZavr \
+            --depth 12 --threshold 150 --max-games 40
+
+      - name: Commit the remembered mistakes
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ ! -f mistakes.json ]; then
+            echo "No mistake book to commit."
+            exit 0
+          fi
+          git config user.name "lichess-bot"
+          git config user.email "lichess-bot@users.noreply.github.com"
+          git add mistakes.json
+          if git diff --cached --quiet; then
+            echo "No new mistakes this session."
+            exit 0
+          fi
+          git commit -m "Remember new mistakes [skip ci]"
+          git push origin HEAD:main
 
       - name: Show the end of the log
         if: always()

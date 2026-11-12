@@ -112,6 +112,11 @@ engine:
     Move Overhead: 300
     MultiPV: 1
 
+  # Positions where the bot blundered are remembered in this file and never repeated.
+  mistakes:
+    enabled: true
+    file: "mistakes.json"
+
   silence_stderr: false
 
 abort_time: 20

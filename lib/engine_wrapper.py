@@ -17,6 +17,7 @@ from collections import Counter
 from collections.abc import Callable
 from lib import model, lichess
 from lib.config import Configuration, change_value_to_list
+from lib.mistake_book import MistakeBook
 from lib.timer import Timer, msec, seconds, msec_str, sec_str, to_seconds
 from lib.lichess_types import (ReadableType, ChessDBMoveType, LichessEGTBMoveType, OPTIONS_GO_EGTB_TYPE, OPTIONS_TYPE,
                        COMMANDS_TYPE, MOVE, InfoStrDict, InfoDictKeys, InfoDictValue, GO_COMMANDS_TYPE, EGTPATH_TYPE,
@@ -37,6 +38,24 @@ BULLET_VARIANTS = {"Standard", "From Position"}
 
 # Variants that the standard chess engine covers. Everything else needs a variant engine.
 STANDARD_VARIANTS = {"Standard", "From Position", "Chess960"}
+
+
+_mistake_books: dict[str, MistakeBook] = {}
+
+
+def get_mistake_book(engine_cfg: Configuration) -> MistakeBook | None:
+    """
+    Return the mistake book of this bot, or None when the feature is disabled.
+
+    The book is loaded once per process and shared by every game the process plays.
+    """
+    cfg = engine_cfg.lookup("mistakes")
+    if not isinstance(cfg, Configuration) or not cfg.enabled:
+        return None
+    path = str(cfg.file or "mistakes.json")
+    if path not in _mistake_books:
+        _mistake_books[path] = MistakeBook(path)
+    return _mistake_books[path]
 
 
 def engine_binary_name(engine_config: Configuration, game: model.Game | None = None) -> str:
@@ -241,6 +260,14 @@ class EngineWrapper:
                 game_ender = li.abort if game.is_abortable() else li.resign
                 game_ender(game.id)
                 return
+
+        mistake_book = get_mistake_book(engine_cfg)
+        if mistake_book is not None and not isinstance(best_move, list) and best_move.move is not None:
+            replacement = mistake_book.replacement(board, best_move.move)
+            if replacement is not None:
+                logger.info(f"Avoiding a remembered mistake: {best_move.move.uci()} -> "
+                            f"{replacement.uci()} in game {game.id}")
+                best_move = chess.engine.PlayResult(replacement, best_move.ponder, best_move.info)
 
         # Heed min_time
         elapsed = setup_timer.time_since_reset()

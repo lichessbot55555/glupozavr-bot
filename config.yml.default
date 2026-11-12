@@ -140,6 +140,9 @@ engine:                            # Engine settings.
 #     depth: 5                     # Search depth ply only.
 #     Do note that the go commands 'movetime' and 'nodes' are invalid and may cause bad time management for XBoard engines.
 
+  mistakes:                        # Remember positions where the bot blundered and never repeat them.
+    enabled: false
+    file: "mistakes.json"
   silence_stderr: false            # Some engines (yes you, Leela) are very noisy.
 
 abort_time: 30                     # Time to abort a game in seconds when there is no activity.
